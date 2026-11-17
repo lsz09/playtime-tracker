@@ -1,0 +1,50 @@
+<Window x:Class="PlayTimeTracker.App.ExclusionWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="PlayTimeTracker - 제외 목록" Width="520" Height="620" MinWidth="420" MinHeight="360"
+        WindowStartupLocation="CenterScreen">
+    <Grid Margin="20,16,20,14">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <StackPanel Margin="0,0,0,14">
+            <TextBlock Text="제외 목록" FontSize="22" FontWeight="SemiBold" />
+            <TextBlock Opacity="0.6" Margin="0,2,0,0" TextWrapping="Wrap"
+                       Text="여기에 있는 exe 이름의 프로그램은 감지하지 않습니다. 추가하면 이미 쌓인 기록도 함께 삭제되고, 빼면 다음 감지부터 다시 기록합니다. 윈도우 기본 프로그램(작업 관리자, 탐색기 등)과 이 앱 자신은 목록과 상관없이 항상 제외됩니다." />
+        </StackPanel>
+
+        <Grid Grid.Row="1" Margin="0,0,0,12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBox x:Name="NameBox" VerticalAlignment="Center" KeyDown="OnNameKeyDown"
+                     ToolTip="exe 파일 이름 (예: KakaoTalk.exe). 확장자를 빼면 .exe를 붙입니다." />
+            <Button Grid.Column="1" Content="추가" Padding="18,6" Margin="8,0,0,0" Click="OnAddClick" />
+        </Grid>
+
+        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+            <ItemsControl x:Name="NameList" Margin="0,0,14,0">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <Grid Margin="0,3">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="{Binding}" FontSize="14" VerticalAlignment="Center"
+                                       TextTrimming="CharacterEllipsis" />
+                            <Button Grid.Column="1" Content="빼기" Padding="12,4" Click="OnRemoveClick" />
+                        </Grid>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+
+        <TextBlock x:Name="StatusText" Grid.Row="3" Margin="0,12,0,0" Opacity="0.75" TextWrapping="Wrap" />
+    </Grid>
+</Window>

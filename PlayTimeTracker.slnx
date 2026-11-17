@@ -1,0 +1,7 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/PlayTimeTracker.App/PlayTimeTracker.App.csproj" />
+    <Project Path="src/PlayTimeTracker.ConsoleApp/PlayTimeTracker.ConsoleApp.csproj" />
+    <Project Path="src/PlayTimeTracker.Core/PlayTimeTracker.Core.csproj" />
+  </Folder>
+</Solution>

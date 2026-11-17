@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <!-- 트레이 아이콘(NotifyIcon)용 -->
+    <UseWindowsForms>true</UseWindowsForms>
+    <AssemblyName>PlayTimeTracker</AssemblyName>
+    <ApplicationIcon>app.ico</ApplicationIcon>
+    <RootNamespace>PlayTimeTracker.App</RootNamespace>
+    <!-- ThemeMode(Fluent 테마)는 아직 실험적 API로 표시되어 있음 -->
+    <NoWarn>$(NoWarn);WPF0001</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- WPF 타입과 이름이 겹치므로 WinForms/Drawing은 전체 이름으로만 쓴다 -->
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\PlayTimeTracker.Core\PlayTimeTracker.Core.csproj" />
+  </ItemGroup>
+
+</Project>

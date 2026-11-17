@@ -1,0 +1,158 @@
+<Window x:Class="PlayTimeTracker.App.StatsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="PlayTimeTracker - 통계" Width="820" Height="660"
+        WindowStartupLocation="CenterScreen">
+    <Window.Resources>
+        <SolidColorBrush x:Key="PreviousBrush" Color="#99909090" />
+    </Window.Resources>
+    <Grid Margin="20,16,20,14">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <Grid Margin="0,0,0,12">
+            <StackPanel>
+                <TextBlock Text="사용 시간 통계" FontSize="22" FontWeight="SemiBold" />
+                <TextBlock x:Name="RangeText" Opacity="0.6" Margin="0,2,0,0" />
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                <!-- 실행 시간 기준 정렬 -->
+                <ToggleButton x:Name="SortDescButton" Content="▼ 많은 순" IsChecked="True" Padding="12,6"
+                              ToolTip="실행 시간이 많은 순" Click="OnSortClick" />
+                <ToggleButton x:Name="SortAscButton" Content="▲ 적은 순" Padding="12,6" Margin="6,0,14,0"
+                              ToolTip="실행 시간이 적은 순" Click="OnSortClick" />
+                <Button Content="새로고침" Padding="14,6" Click="OnRefreshClick" />
+            </StackPanel>
+        </Grid>
+
+        <StackPanel Grid.Row="1" Margin="0,0,0,12">
+          <!-- 기간: 미리 정한 기간 또는 날짜 직접 선택 -->
+          <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+            <TextBlock Text="기간" VerticalAlignment="Center" Margin="0,0,10,0" />
+            <ComboBox x:Name="PeriodBox" Width="150" SelectedIndex="0" SelectionChanged="OnPeriodChanged">
+                <ComboBoxItem Content="오늘" Tag="today" />
+                <ComboBoxItem Content="어제" Tag="yesterday" />
+                <ComboBoxItem Content="이번 주" Tag="week" />
+                <ComboBoxItem Content="지난주" Tag="lastweek" />
+                <ComboBoxItem Content="이번 달" Tag="month" />
+                <ComboBoxItem Content="지난달" Tag="lastmonth" />
+                <ComboBoxItem Content="최근 7일" Tag="last7" />
+                <ComboBoxItem Content="최근 30일" Tag="last30" />
+                <ComboBoxItem Content="전체 기간" Tag="all" />
+                <ComboBoxItem Content="날짜 직접 선택" Tag="custom" />
+            </ComboBox>
+            <StackPanel x:Name="CustomPanel" Orientation="Horizontal" Visibility="Collapsed" Margin="10,0,0,0">
+                <DatePicker x:Name="FromPicker" Width="150" SelectedDateChanged="OnPeriodChanged" />
+                <TextBlock Text="~" VerticalAlignment="Center" Margin="8,0" />
+                <DatePicker x:Name="ToPicker" Width="150" SelectedDateChanged="OnPeriodChanged" />
+            </StackPanel>
+            <CheckBox x:Name="GamesOnlyOption" Content="게임만" Margin="20,0,0,0" Checked="OnPeriodChanged" Unchecked="OnPeriodChanged" />
+          </StackPanel>
+          <Grid>
+            <!-- 비교 대상: 어제/지난주/지난달 전체, 또는 고른 날부터 같은 길이 -->
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="비교" VerticalAlignment="Center" Margin="0,0,10,0" />
+                <ComboBox x:Name="CompareBox" Width="150" SelectedIndex="4" SelectionChanged="OnPeriodChanged">
+                    <ComboBoxItem Content="어제" Tag="yesterday" />
+                    <ComboBoxItem Content="지난주" Tag="lastweek" />
+                    <ComboBoxItem Content="지난달" Tag="lastmonth" />
+                    <ComboBoxItem Content="직접 선택" Tag="custom" />
+                    <ComboBoxItem Content="비교 안 함" Tag="none" />
+                </ComboBox>
+                <StackPanel x:Name="CompareCustomPanel" Orientation="Horizontal" Visibility="Collapsed" Margin="10,0,0,0">
+                    <DatePicker x:Name="ComparePicker" Width="150" SelectedDateChanged="OnPeriodChanged"
+                                ToolTip="비교할 기간의 시작일 (길이는 위 기간과 같게 잡습니다)" />
+                    <TextBlock Text="부터" VerticalAlignment="Center" Margin="8,0,0,0" Opacity="0.6" />
+                </StackPanel>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                <Rectangle Width="12" Height="12" Fill="{StaticResource AccentSoftBrush}" VerticalAlignment="Center" />
+                <TextBlock Text="실행" FontSize="12" Margin="6,0,14,0" VerticalAlignment="Center" />
+                <Rectangle Width="12" Height="12" Fill="{StaticResource AccentBrush}" VerticalAlignment="Center" />
+                <TextBlock Text="포커스" FontSize="12" Margin="6,0,14,0" VerticalAlignment="Center" />
+                <Rectangle x:Name="PreviousLegendMark" Width="12" Height="10" Fill="{StaticResource PreviousBrush}" VerticalAlignment="Center" />
+                <TextBlock x:Name="PreviousLegendText" Text="어제" FontSize="12" Margin="6,0,0,0" VerticalAlignment="Center" />
+            </StackPanel>
+          </Grid>
+        </StackPanel>
+
+        <Grid Grid.Row="2">
+            <TextBlock x:Name="EmptyText" Text="이 기간에는 기록이 없습니다." Opacity="0.6"
+                       HorizontalAlignment="Center" VerticalAlignment="Center" Visibility="Collapsed" />
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <ItemsControl x:Name="StatList" Margin="0,0,14,0">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Margin="0,7">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="230" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="104" />
+                                    <ColumnDefinition Width="80" />
+                                </Grid.ColumnDefinitions>
+                                <Image Source="{Binding Icon}" Width="24" Height="24"
+                                       HorizontalAlignment="Left" VerticalAlignment="Center"
+                                       RenderOptions.BitmapScalingMode="HighQuality" />
+                                <StackPanel Margin="34,0,12,0" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding DisplayName}" FontSize="14" FontWeight="SemiBold"
+                                               TextTrimming="CharacterEllipsis" ToolTip="{Binding DisplayName}" />
+                                    <TextBlock Text="{Binding Detail}" FontSize="11" Opacity="0.6"
+                                               TextTrimming="CharacterEllipsis" ToolTip="{Binding Detail}" />
+                                </StackPanel>
+                                <!-- 막대: 이번 기간과 이전 기간을 통틀어 가장 긴 실행 시간을 100%로 둔 비율 -->
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <Grid Height="16">
+                                        <Border Background="{StaticResource TrackBrush}" />
+                                        <Border Background="{StaticResource AccentSoftBrush}">
+                                            <Border.RenderTransform>
+                                                <ScaleTransform ScaleX="{Binding RunRatio}" />
+                                            </Border.RenderTransform>
+                                        </Border>
+                                        <Border Background="{StaticResource AccentBrush}">
+                                            <Border.RenderTransform>
+                                                <ScaleTransform ScaleX="{Binding FocusRatio}" />
+                                            </Border.RenderTransform>
+                                        </Border>
+                                    </Grid>
+                                    <!-- 이전 기간의 실행 시간 -->
+                                    <Border Height="10" Margin="0,3,0,0" Background="{StaticResource PreviousBrush}"
+                                            ToolTip="{Binding PreviousTip}">
+                                        <Border.RenderTransform>
+                                            <ScaleTransform ScaleX="{Binding PreviousRatio}" />
+                                        </Border.RenderTransform>
+                                    </Border>
+                                </StackPanel>
+                                <StackPanel Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding RunText}" FontSize="14" HorizontalAlignment="Right"
+                                               Typography.NumeralAlignment="Tabular" />
+                                    <TextBlock Text="{Binding DeltaText}" FontSize="11" Opacity="0.7" HorizontalAlignment="Right"
+                                               Typography.NumeralAlignment="Tabular" ToolTip="{Binding PreviousTip}">
+                                        <!-- 비교 안 함일 때는 줄을 없애 실행 시간과 포커스 시간의 높이를 맞춘다 -->
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Style.Triggers>
+                                                    <Trigger Property="Text" Value="">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                    </Trigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </StackPanel>
+                                <TextBlock Grid.Column="3" Text="{Binding FocusText}" FontSize="14"
+                                           HorizontalAlignment="Right" VerticalAlignment="Center"
+                                           Typography.NumeralAlignment="Tabular" />
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Grid>
+
+        <TextBlock x:Name="TotalText" Grid.Row="3" Margin="0,12,0,0" Opacity="0.75" TextWrapping="Wrap" />
+    </Grid>
+</Window>

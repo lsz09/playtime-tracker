@@ -1,0 +1,18 @@
+# 빌드 결과
+bin/
+obj/
+artifacts/
+publish/
+
+# IDE
+.vs/
+.vscode/
+*.user
+
+# 로컬 데이터
+*.db
+*.db-shm
+*.db-wal
+
+# Claude Code 로컬 설정
+.claude/settings.local.json
