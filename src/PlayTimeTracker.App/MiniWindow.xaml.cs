@@ -26,6 +26,7 @@ public partial class MiniWindow : Window
     private bool _moved; // 사용자가 끌어서 옮겼는지
 
     private const string ScaleKey = "mini_scale";
+    private const string PositionKey = "mini_position";
     private const double MinScale = 0.6, MaxScale = 3.0;
     private double _scale = 1;
     private double _resizeStartScale;
@@ -46,6 +47,7 @@ public partial class MiniWindow : Window
         UiScale.SetExtra(this, _scale);
 
         WindowTools.HideFromAltTab(this);
+        RestorePosition();
 
         _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
         _timer.Tick += (_, _) => Refresh();
@@ -60,11 +62,10 @@ public partial class MiniWindow : Window
     }
 
     /// <summary>
-    /// 사용자가 옮기기 전에는 화면 오른쪽 아래에 붙여 두고, 옮긴 뒤에는 화면 밖으로 나가지만 않게 한다.
+    /// 사용자가 옮기기 전에는 주 모니터 오른쪽 아래에 붙여 두고, 옮긴 뒤에는 지금 놓인 모니터 밖으로 나가지만 않게 한다.
     /// </summary>
     private void Place()
     {
-        var area = SystemParameters.WorkArea;
         if (_resizeEdge != null)
         {
             // 크기를 바꾸는 동안에는 고정한 쪽만 맞춘다 (끝나면 화면 안으로 다시 넣는다)
@@ -74,13 +75,32 @@ public partial class MiniWindow : Window
         }
         if (!_moved)
         {
-            Left = area.Right - ActualWidth - 24;
-            Top = area.Bottom - ActualHeight - 24;
+            var primary = SystemParameters.WorkArea;
+            Left = primary.Right - ActualWidth - 24;
+            Top = primary.Bottom - ActualHeight - 24;
             return;
         }
+        var area = WindowTools.WorkAreaOf(this);
         Left = Math.Max(area.Left, Math.Min(Left, area.Right - ActualWidth));
         Top = Math.Max(area.Top, Math.Min(Top, area.Bottom - ActualHeight));
     }
+
+    /// <summary>옮긴 위치(왼쪽 위)를 저장해 두었다가, 그 자리가 아직 화면 안이면 다음에도 거기에 띄운다.</summary>
+    private void RestorePosition()
+    {
+        var parts = _engine.Db.GetSetting(PositionKey)?.Split(',');
+        if (parts is not { Length: 2 } ||
+            !double.TryParse(parts[0], NumberStyles.Float, CultureInfo.InvariantCulture, out double left) ||
+            !double.TryParse(parts[1], NumberStyles.Float, CultureInfo.InvariantCulture, out double top) ||
+            !WindowTools.IsOnAnyScreen(this, new Point(left + 1, top + 1)))
+            return; // 저장된 위치가 없거나, 그 모니터를 뺐으면 기본 위치
+        Left = left;
+        Top = top;
+        _moved = true;
+    }
+
+    private void SavePosition() =>
+        _engine.Db.SetSetting(PositionKey, string.Create(CultureInfo.InvariantCulture, $"{Left:0.#},{Top:0.#}"));
 
     private void Refresh()
     {
@@ -120,6 +140,7 @@ public partial class MiniWindow : Window
         DragMove();
         _moved = true;
         Place();
+        SavePosition();
     }
 
     // ── 크기 조절: 오른쪽 아래 모서리를 끌거나 마우스 휠 ──
@@ -175,6 +196,7 @@ public partial class MiniWindow : Window
         _resizeEdge = null;
         _anchorRight = _anchorBottom = null;
         Place();
+        SavePosition();
     }
 
     private void OnWheel(object sender, MouseWheelEventArgs e) =>
