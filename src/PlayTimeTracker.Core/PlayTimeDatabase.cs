@@ -140,6 +140,7 @@ public sealed class PlayTimeDatabase : IDisposable
             CREATE INDEX IF NOT EXISTS ix_sessions_start ON sessions(start_time);
             """);
         AddMissingColumns();
+        MergeVersionedPrograms();
 
         // 제외 목록은 처음 한 번만 기본값으로 채우고, 이후에는 사용자가 고친 그대로 쓴다
         if (!hadExclusions)
@@ -204,6 +205,66 @@ public sealed class PlayTimeDatabase : IDisposable
             Execute("ALTER TABLE programs ADD COLUMN hidden_override INTEGER");
             if (existing.Contains("hidden")) Execute("UPDATE programs SET hidden_override = 1 WHERE hidden = 1");
         }
+    }
+
+    /// <summary>
+    /// 예전에는 경로를 그대로 키로 써서, 업데이트로 설치 폴더의 버전이 바뀐 프로그램이 여러 줄로 나뉘어 있다.
+    /// 키를 <see cref="ProgramKey"/> 방식으로 바꾸고, 같은 키가 된 줄은 하나로 합친다.
+    /// 남기는 줄은 가장 최근에 쓴 줄(경로와 아이콘이 최신)이고, 그 줄에 없는 사용자 설정은 다른 줄에서 가져온다.
+    /// 이미 바뀐 DB에서는 아무것도 하지 않는다.
+    /// </summary>
+    private void MergeVersionedPrograms()
+    {
+        var rows = new List<(long Id, string Key, string NewKey, long LastUsed)>();
+        using (var cmd = _conn.CreateCommand())
+        {
+            cmd.CommandText = """
+                SELECT p.id, p.key, p.exe_name, p.exe_path,
+                       COALESCE((SELECT MAX(end_time) FROM sessions s WHERE s.program_id = p.id), 0)
+                FROM programs p
+                """;
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                string newKey = ProgramKey.From(NullableString(reader, 3), reader.GetString(2));
+                rows.Add((reader.GetInt64(0), reader.GetString(1), newKey, reader.GetInt64(4)));
+            }
+        }
+        if (rows.All(r => r.Key == r.NewKey)) return;
+
+        using var tx = _conn.BeginTransaction();
+        void Run(string sql, params (string Name, object Value)[] args)
+        {
+            using var cmd = _conn.CreateCommand();
+            cmd.Transaction = tx;
+            cmd.CommandText = sql;
+            foreach (var (name, value) in args) cmd.Parameters.AddWithValue(name, value);
+            cmd.ExecuteNonQuery();
+        }
+
+        foreach (var group in rows.GroupBy(r => r.NewKey))
+        {
+            // 최근에 쓴 순서. 남길 줄이 맨 앞
+            var ordered = group.OrderByDescending(r => r.LastUsed).ThenByDescending(r => r.Id).ToList();
+            long keep = ordered[0].Id;
+
+            foreach (var other in ordered.Skip(1))
+            {
+                // 남길 줄에 비어 있는 설정만 채운다 (더 최근 줄의 설정이 우선)
+                foreach (var column in new[] { "custom_name", "group_name", "alert_minutes", "is_game", "hidden_override" })
+                {
+                    Run($"""
+                        UPDATE programs SET {column} = (SELECT {column} FROM programs WHERE id = $other)
+                        WHERE id = $keep AND {column} IS NULL
+                        """, ("$keep", keep), ("$other", other.Id));
+                }
+                Run("UPDATE sessions SET program_id = $keep WHERE program_id = $other", ("$keep", keep), ("$other", other.Id));
+                Run("DELETE FROM programs WHERE id = $other", ("$other", other.Id));
+            }
+            if (ordered[0].Key != group.Key)
+                Run("UPDATE programs SET key = $key WHERE id = $keep", ("$key", group.Key), ("$keep", keep));
+        }
+        tx.Commit();
     }
 
     /// <summary>새 세션은 추가하고, 이미 저장된 세션은 종료 시각과 포커스 초를 갱신한다 (한 트랜잭션).</summary>

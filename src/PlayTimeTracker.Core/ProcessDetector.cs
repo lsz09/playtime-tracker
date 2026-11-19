@@ -164,7 +164,7 @@ public sealed class ProcessDetector
             }
         }
 
-        string key = (path ?? exeName).ToLowerInvariant();
+        string key = ProgramKey.From(path, exeName); // 경로 속 버전 번호는 무시 (업데이트해도 같은 프로그램)
         if (!_programsByKey.TryGetValue(key, out var program))
         {
             program = new ProgramInfo(key, exeName, path, ReadDisplayName(path, exeName));
